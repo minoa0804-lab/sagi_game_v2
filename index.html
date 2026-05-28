@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>詐欺を切れ！</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- タイトル画面 -->
+        <div id="titleScreen" class="screen screen-active">
+            <div class="screen-content">
+                <div class="title-logo">
+                    <div class="phone-icon">☎</div>
+                    <h1>詐欺を切れ！</h1>
+                    <p class="subtitle">～電話で判定ゲーム～</p>
+                </div>
+                
+                <div class="title-description">
+                    <p>💡 <strong>ルール説明</strong></p>
+                    <p>電話の内容を2行で判定します。</p>
+                    <p>詐欺だと思ったら「切る」</p>
+                    <p>普通の電話なら「受ける」</p>
+                    <br>
+                    <p>🎯 特に2行目の内容で判定してください</p>
+                </div>
+
+                <div class="difficulty-selector">
+                    <p>難易度を選択：</p>
+                    <button class="difficulty-btn" data-difficulty="easy">簡単</button>
+                    <button class="difficulty-btn selected" data-difficulty="normal">通常</button>
+                    <button class="difficulty-btn" data-difficulty="hard">難題</button>
+                </div>
+
+                <button id="startButton" class="start-button">スタート</button>
+            </div>
+        </div>
+
+        <!-- ゲーム画面 -->
+        <div id="gameScreen" class="screen">
+            <div class="screen-header">
+                <div class="score-display">
+                    Score: <span id="scoreValue">0000</span>
+                </div>
+                <div class="timer-display">
+                    <span id="callCount">1</span> / <span id="totalCalls">15</span>
+                </div>
+            </div>
+
+            <div class="combo-display" id="comboDisplay">COMBO 0</div>
+
+            <div class="screen-main">
+                <div class="call-display">
+                    <div id="line1" class="call-line line1"></div>
+                    <div id="line2" class="call-line line2" style="opacity: 0;"></div>
+                </div>
+            </div>
+
+            <div class="risk-meter">
+                <div class="risk-meter-header">
+                    <span>危険度</span>
+                    <span id="riskLabel">LOW</span>
+                </div>
+                <div class="risk-meter-track">
+                    <div id="riskFill" class="risk-meter-fill"></div>
+                </div>
+            </div>
+
+            <div class="screen-footer">
+                <button id="acceptButton" class="action-button accept-button">
+                    📞 受ける
+                </button>
+                <button id="cutButton" class="action-button cut-button">
+                    ✂ 切る
+                </button>
+            </div>
+
+            <div id="resultMessage" class="result-message"></div>
+            <div id="explanationPanel" class="explanation-panel"></div>
+        </div>
+
+        <!-- 結果画面 -->
+        <div id="resultScreen" class="screen">
+            <div class="screen-content">
+                <h2>ゲーム終了！</h2>
+                
+                <div class="final-score">
+                    <p class="score-label">最終スコア</p>
+                    <p class="score-value" id="finalScore">0000</p>
+                </div>
+
+                <div class="rank-display">
+                    <p class="rank-label">ランク</p>
+                    <p class="rank-value" id="rankValue">-</p>
+                    <p class="title-value" id="titleValue">-</p>
+                </div>
+
+                <div class="result-stats">
+                    <p>正解：<span id="correctCount">0</span> / <span id="totalCount">0</span></p>
+                    <p>正答率：<span id="correctRate">0</span>%</p>
+                    <p>最大コンボ：<span id="maxCombo">0</span></p>
+                </div>
+
+                <div class="result-message-box">
+                    <p id="educationMessage"></p>
+                </div>
+
+                <button id="restartButton" class="restart-button">もう一度プレイ</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
