@@ -129,28 +129,6 @@ const scoreValue = document.getElementById('scoreValue');
 const callCountElement = document.getElementById('callCount');
 const resultMessage = document.getElementById('resultMessage');
 const comboDisplay = document.getElementById('comboDisplay');
-const riskFill = document.getElementById('riskFill');
-const riskLabel = document.getElementById('riskLabel');
-const explanationPanel = document.getElementById('explanationPanel');
-
-const dangerWordRules = [
-    { word: '暗証番号', label: '暗証番号', reason: '銀行や公的機関が電話で暗証番号を聞くことはありません。' },
-    { word: '口座番号', label: '口座番号', reason: '口座情報を電話口で伝えるよう求められたら、一度切って確認してください。' },
-    { word: '口座の残高', label: '口座の残高', reason: '残高や資産状況を聞き出す電話は詐欺の典型です。' },
-    { word: '資産状況', label: '資産状況', reason: '資産や預金額を聞かれても答えず、家族や警察に相談してください。' },
-    { word: 'ATM', label: 'ATM', reason: '還付金や手続きでATM操作を指示する電話は詐欺です。' },
-    { word: '振り込', label: '振り込み', reason: '急いで振り込ませる電話は、相手の身元確認が先です。' },
-    { word: '現金', label: '現金', reason: '現金を用意させたり取りに来る話は詐欺の危険が高いです。' },
-    { word: 'キャッシュカード', label: 'キャッシュカード', reason: 'カードを預ける、送る、封筒に入れる指示は危険です。' },
-    { word: '電子マネー', label: '電子マネー', reason: '電子マネー購入を求める電話は詐欺を疑ってください。' },
-    { word: '手数料', label: '手数料', reason: '受け取りや返金のために手数料を先払いさせる話は危険です。' },
-    { word: '今日中', label: '今日中', reason: '期限を迫って冷静な確認を妨げるのは詐欺の手口です。' },
-    { word: 'すぐに', label: 'すぐに', reason: '急がせる電話ほど、一度切って確認することが大切です。' },
-    { word: '内緒', label: '内緒', reason: '家族や警察に相談させない電話は危険です。' },
-    { word: '誰にも話さない', label: '誰にも話さない', reason: '相談を止める相手は信用せず、すぐ周囲に確認してください。' },
-    { word: '逮捕', label: '逮捕', reason: '逮捕や差し押さえをちらつかせて支払いを迫る電話は詐欺の可能性が高いです。' },
-    { word: '凍結', label: '凍結', reason: '口座凍結を理由に送金や情報提供を求める電話は危険です。' }
-];
 
 // イベントリスナー設定
 startButton.addEventListener('click', startGame);
@@ -307,36 +285,6 @@ function setAnswerButtonsEnabled(enabled) {
     cutButton.style.opacity = enabled ? '1' : '0.5';
 }
 
-function findDangerWords(data) {
-    const text = `${data.line1} ${data.line2}`;
-    return dangerWordRules.filter(rule => text.includes(rule.word));
-}
-
-function calculateRiskLevel(data) {
-    if (data.category !== 'fraud') {
-        return 12;
-    }
-
-    const matches = findDangerWords(data).length;
-    return Math.min(100, 45 + matches * 18);
-}
-
-function updateRiskMeter(level) {
-    const normalizedLevel = Math.max(0, Math.min(100, level));
-    riskFill.style.width = `${normalizedLevel}%`;
-
-    if (normalizedLevel >= 75) {
-        riskLabel.textContent = 'HIGH';
-        riskFill.className = 'risk-meter-fill risk-high';
-    } else if (normalizedLevel >= 45) {
-        riskLabel.textContent = 'MID';
-        riskFill.className = 'risk-meter-fill risk-mid';
-    } else {
-        riskLabel.textContent = 'LOW';
-        riskFill.className = 'risk-meter-fill risk-low';
-    }
-}
-
 function updateComboDisplay() {
     comboDisplay.textContent = `COMBO ${gameState.combo}`;
     comboDisplay.classList.toggle('combo-active', gameState.combo >= 2);
@@ -351,24 +299,6 @@ function getRankTitle(rank) {
         D: '要復習'
     };
     return titles[rank] || '要復習';
-}
-
-function getAnswerExplanation(data, isCorrect) {
-    const dangerWords = findDangerWords(data);
-    const labels = dangerWords.map(item => item.label);
-    const firstReason = dangerWords[0]?.reason;
-
-    if (data.category === 'fraud') {
-        const wordText = labels.length > 0 ? labels.join(' / ') : '急がせる・秘密にさせる表現';
-        const reason = firstReason || '相手の身元を確認できないまま、お金や個人情報を求める電話は危険です。';
-        return `${isCorrect ? '見抜けました。' : 'ここが危険でした。'} 危険ワード: ${wordText}\n${reason}`;
-    }
-
-    if (data.category === 'normal') {
-        return `${isCorrect ? '落ち着いて判断できました。' : '詐欺とは限らない内容でした。'} お金の要求、暗証番号、ATM操作、秘密の指示がないかを確認しましょう。`;
-    }
-
-    return '迷う内容は、その場で決めずに家族や警察へ相談する判断も有効です。';
 }
 
 function shuffleArray(items) {
@@ -433,8 +363,6 @@ function startGame() {
     buildQuestionQueue();
     gameState.totalCalls = gameState.questionQueue.length;
     updateComboDisplay();
-    updateRiskMeter(0);
-    explanationPanel.textContent = '';
     
     showScreen('game');
     nextCall();
@@ -464,10 +392,8 @@ function nextCall() {
     callCountElement.textContent = gameState.callCount;
     updateScore();
     updateComboDisplay();
-    updateRiskMeter(0);
     resultMessage.textContent = '';
     resultMessage.style.color = '#fff';
-    explanationPanel.textContent = '';
     
     // 1行目を表示
     line1Element.textContent = gameState.currentData.line1;
@@ -498,7 +424,6 @@ function displayLine2CharByChar(text) {
     const charInterval = 50; // ミリ秒（一文字ずつの間隔）
 
     setAnswerButtonsEnabled(true);
-    updateRiskMeter(calculateRiskLevel(gameState.currentData));
     
     gameState.line2IntervalId = setInterval(() => {
         if (index < text.length) {
@@ -596,7 +521,6 @@ function judgeAnswer(action) {
     const comboText = isCorrect && gameState.combo >= 2 ? ` COMBO x${gameState.combo}` : '';
     resultMessage.textContent = `${messageText}${comboText}`;
     resultMessage.style.color = messageColor;
-    explanationPanel.textContent = getAnswerExplanation(data, isCorrect);
     updateComboDisplay();
     
     // 効果音フィードバック
@@ -716,8 +640,6 @@ function restartGame() {
     gameState.currentData = null;
     setAnswerButtonsEnabled(false);
     updateComboDisplay();
-    updateRiskMeter(0);
-    explanationPanel.textContent = '';
     updateScore();
 }
 
