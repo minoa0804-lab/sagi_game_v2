@@ -4,102 +4,877 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>詐欺を切れ！</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            min-height: 100svh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #202020;
+            color: #fff;
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 10px;
+            overflow: hidden;
+        }
+        .game {
+            width: min(100%, 460px);
+            height: min(760px, calc(100svh - 20px));
+            min-height: 0;
+            background: linear-gradient(#2b2b2b, #171717);
+            border: 6px solid #444;
+            border-radius: 18px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.16s ease, border-color 0.16s ease;
+        }
+        .game.flash-correct {
+            border-color: #64d46f;
+            box-shadow: 0 0 0 4px rgba(100, 212, 111, 0.22), 0 12px 28px rgba(0, 0, 0, 0.55);
+        }
+        .game.flash-wrong {
+            border-color: #e06969;
+            box-shadow: 0 0 0 4px rgba(224, 105, 105, 0.24), 0 12px 28px rgba(0, 0, 0, 0.55);
+        }
+        .screen { display: none; flex: 1; flex-direction: column; }
+        .screen.active { display: flex; }
+        .title { justify-content: center; gap: 20px; text-align: center; }
+        .phone { font-size: 44px; line-height: 1; }
+        h1 { font-size: 34px; letter-spacing: 0; }
+        .subtitle, .small { color: #cfcfcf; font-size: 14px; line-height: 1.7; }
+        .rule, .panel {
+            border: 2px solid #666;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 14px;
+            line-height: 1.8;
+            font-size: 15px;
+        }
+        .rule { text-align: left; }
+        .difficulty, .actions, .chips {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        button {
+            border: 3px solid #777;
+            border-radius: 8px;
+            background: #333;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        button:active { transform: translateY(1px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .difficulty button { padding: 8px 14px; font-size: 14px; }
+        .difficulty button.selected { background: #666; border-color: #aaa; }
+        .start, .restart { align-self: center; padding: 15px 34px; font-size: 20px; }
+        .play { gap: 14px; }
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            border: 2px solid #5c5c5c;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.28);
+            padding: 12px;
+            font-family: "Courier New", monospace;
+            font-weight: 700;
+        }
+        .stage-strip {
+            min-height: 34px;
+            border: 2px solid #505050;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #d8d8d8;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            padding: 6px 10px;
+        }
+        .call {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 18px;
+            border: 3px solid #5c5c5c;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 20px;
+            min-height: 0;
+        }
+        .line {
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            line-height: 1.65;
+            font-size: 20px;
+        }
+        .line:first-child { color: #c8c8c8; font-weight: 700; }
+        .actions button { flex: 1; padding: 16px 10px; font-size: 18px; }
+        .accept { background: #28562e; border-color: #4f9a5b; }
+        .cut { background: #662b2b; border-color: #b55454; }
+        .feedback {
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            white-space: pre-line;
+            font-weight: 700;
+            line-height: 1.5;
+        }
+        .result { gap: 12px; overflow-y: auto; text-align: center; padding-right: 2px; }
+        .score { font-size: 42px; font-family: "Courier New", monospace; font-weight: 700; }
+        .panel { text-align: left; font-size: 14px; }
+        .panel-title { font-weight: 700; color: #fff; text-align: center; margin-bottom: 6px; }
+        .chips { list-style: none; }
+        .chips li {
+            border: 1px solid #777;
+            border-radius: 5px;
+            padding: 3px 7px;
+            background: rgba(0, 0, 0, 0.22);
+        }
+        @media (max-width: 480px) {
+            body {
+                align-items: stretch;
+                padding: 8px;
+            }
+            .game {
+                width: 100%;
+                height: calc(100svh - 16px);
+                border-width: 5px;
+                border-radius: 16px;
+                padding: 14px;
+            }
+            .title { gap: 16px; }
+            .phone { font-size: 38px; }
+            h1 { font-size: 30px; }
+            .rule, .panel {
+                padding: 12px;
+                line-height: 1.7;
+                font-size: 14px;
+            }
+            .difficulty button {
+                min-width: 72px;
+                padding: 8px 10px;
+            }
+            .start, .restart {
+                padding: 14px 30px;
+                font-size: 19px;
+            }
+            .play { gap: 10px; }
+            .hud {
+                padding: 10px;
+                font-size: 14px;
+            }
+            .stage-strip {
+                min-height: 30px;
+                font-size: 13px;
+                padding: 5px 8px;
+            }
+            .call {
+                gap: 12px;
+                padding: 16px;
+            }
+            .line {
+                min-height: 68px;
+                line-height: 1.55;
+            }
+            .line { font-size: 18px; }
+            .actions button {
+                padding: 14px 8px;
+                font-size: 17px;
+            }
+            .feedback {
+                min-height: 44px;
+                font-size: 14px;
+            }
+            .score { font-size: 36px; }
+        }
+
+        @media (max-height: 700px) {
+            .game {
+                border-width: 4px;
+                border-radius: 14px;
+                padding: 12px;
+            }
+            .title { gap: 12px; }
+            .phone { font-size: 32px; }
+            h1 { font-size: 28px; }
+            .subtitle, .small { font-size: 13px; line-height: 1.5; }
+            .rule, .panel {
+                padding: 10px;
+                line-height: 1.55;
+                font-size: 13px;
+            }
+            .difficulty { gap: 6px; }
+            .difficulty button {
+                padding: 7px 9px;
+                font-size: 13px;
+            }
+            .start, .restart {
+                padding: 12px 26px;
+                font-size: 18px;
+            }
+            .play { gap: 8px; }
+            .hud {
+                padding: 8px;
+                font-size: 13px;
+            }
+            .stage-strip {
+                min-height: 28px;
+                font-size: 12px;
+                padding: 4px 6px;
+            }
+            .call {
+                gap: 10px;
+                padding: 12px;
+                border-width: 2px;
+            }
+            .line {
+                min-height: 56px;
+                font-size: 16px;
+                line-height: 1.45;
+            }
+            .actions button {
+                padding: 11px 6px;
+                font-size: 16px;
+            }
+            .feedback {
+                min-height: 40px;
+                font-size: 13px;
+                line-height: 1.4;
+            }
+            .result { gap: 8px; }
+            .score { font-size: 32px; }
+        }
+
+        @media (min-width: 700px) and (min-height: 800px) {
+            body { overflow: auto; }
+            .game {
+                height: 760px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="game-container">
-        <!-- タイトル画面 -->
-        <div id="titleScreen" class="screen screen-active">
-            <div class="screen-content">
-                <div class="title-logo">
-                    <div class="phone-icon">☎</div>
-                    <h1>詐欺を切れ！</h1>
-                    <p class="subtitle">～電話で判定ゲーム～</p>
-                </div>
-                
-                <div class="title-description">
-                    <p>💡 <strong>ルール説明</strong></p>
-                    <p>電話の内容を2行で判定します。</p>
-                    <p>詐欺だと思ったら「切る」</p>
-                    <p>普通の電話なら「受ける」</p>
-                    <br>
-                    <p>🎯 特に2行目の内容で判定してください</p>
-                </div>
-
-                <div class="difficulty-selector">
-                    <p>難易度を選択：</p>
-                    <button class="difficulty-btn" data-difficulty="easy">簡単</button>
-                    <button class="difficulty-btn selected" data-difficulty="normal">通常</button>
-                    <button class="difficulty-btn" data-difficulty="hard">難題</button>
-                </div>
-
-                <button id="startButton" class="start-button">スタート</button>
+    <main class="game">
+        <section id="titleScreen" class="screen title active">
+            <div>
+                <div class="phone">☎</div>
+                <h1>詐欺を切れ！</h1>
+                <p class="subtitle">電話で判定ゲーム</p>
             </div>
-        </div>
-
-        <!-- ゲーム画面 -->
-        <div id="gameScreen" class="screen">
-            <div class="screen-header">
-                <div class="score-display">
-                    Score: <span id="scoreValue">0000</span>
-                </div>
-                <div class="timer-display">
-                    <span id="callCount">1</span> / <span id="totalCalls">15</span>
-                </div>
+            <div class="rule">
+                <p><strong>ルール説明</strong></p>
+                <p>電話の内容を2行で判定します。</p>
+                <p>詐欺だと思ったら「切る」</p>
+                <p>普通の電話なら「受ける」</p>
+                <p>特に2行目の内容で判定してください。</p>
             </div>
-
-            <div class="combo-display" id="comboDisplay">COMBO 0</div>
-
-            <div class="screen-main">
-                <div class="call-display">
-                    <div id="line1" class="call-line line1"></div>
-                    <div id="line2" class="call-line line2" style="opacity: 0;"></div>
-                </div>
+            <p class="small">難易度を選択</p>
+            <div class="difficulty">
+                <button type="button" data-difficulty="easy">簡単</button>
+                <button type="button" class="selected" data-difficulty="normal">通常</button>
+                <button type="button" data-difficulty="hard">難題</button>
             </div>
+            <button id="startButton" class="start" type="button">スタート</button>
+        </section>
 
-            <div class="screen-footer">
-                <button id="acceptButton" class="action-button accept-button">
-                    📞 受ける
-                </button>
-                <button id="cutButton" class="action-button cut-button">
-                    ✂ 切る
-                </button>
+        <section id="gameScreen" class="screen play">
+            <div class="hud">
+                <div>Score: <span id="scoreValue">0000</span></div>
+                <div><span id="callCount">1</span> / <span id="totalCalls">15</span>　連続:<span id="streakValue">0</span></div>
             </div>
-
-            <div id="resultMessage" class="result-message"></div>
-        </div>
-
-        <!-- 結果画面 -->
-        <div id="resultScreen" class="screen">
-            <div class="screen-content">
-                <h2>ゲーム終了！</h2>
-                
-                <div class="final-score">
-                    <p class="score-label">最終スコア</p>
-                    <p class="score-value" id="finalScore">0000</p>
-                </div>
-
-                <div class="rank-display">
-                    <p class="rank-label">ランク</p>
-                    <p class="rank-value" id="rankValue">-</p>
-                    <p class="title-value" id="titleValue">-</p>
-                </div>
-
-                <div class="result-stats">
-                    <p>正解：<span id="correctCount">0</span> / <span id="totalCount">0</span></p>
-                    <p>正答率：<span id="correctRate">0</span>%</p>
-                    <p>最大コンボ：<span id="maxCombo">0</span></p>
-                </div>
-
-                <div class="result-message-box">
-                    <p id="educationMessage"></p>
-                </div>
-
-                <button id="restartButton" class="restart-button">もう一度プレイ</button>
+            <div id="stageLabel" class="stage-strip">ステージ</div>
+            <div class="call">
+                <div id="line1" class="line"></div>
+                <div id="line2" class="line"></div>
             </div>
-        </div>
-    </div>
+            <div class="actions">
+                <button id="acceptButton" class="accept" type="button" disabled>📞 受ける</button>
+                <button id="cutButton" class="cut" type="button" disabled>✂ 切る</button>
+            </div>
+            <div id="feedback" class="feedback"></div>
+        </section>
 
-    <script src="script.js"></script>
+        <section id="resultScreen" class="screen result">
+            <h2>ゲーム終了！</h2>
+            <div>
+                <p class="small">最終スコア</p>
+                <p id="finalScore" class="score">0000</p>
+            </div>
+            <div>
+                <p class="small">ランク</p>
+                <p id="rankValue" class="score">-</p>
+            </div>
+            <div class="panel">
+                <p>正解: <span id="correctCount">0</span> / <span id="totalCount">0</span></p>
+                <p>正答率: <span id="correctRate">0</span>%</p>
+            </div>
+            <div class="panel">
+                <p class="panel-title" id="diagnosisTitle">判定タイプ</p>
+                <p id="diagnosisMessage"></p>
+            </div>
+            <div class="panel">
+                <p class="panel-title">今回の危険ワード</p>
+                <ul id="dangerWordList" class="chips"></ul>
+                <p id="mistakeReview"></p>
+            </div>
+            <div class="panel">
+                <p id="educationMessage"></p>
+            </div>
+            <button id="restartButton" class="restart" type="button">もう一度プレイ</button>
+        </section>
+    </main>
+
+    <script>
+        const questions = [
+            { id: 1, category: 'fraud', line1: 'もしもし検察庁ですが。', line2: '口座の残高を教えてください。', correct: 'cut', stage: getStage('もしもし検察庁ですが。') },
+            { id: 2, category: 'fraud', line1: '警察の者ですが。', line2: '口座にいくら入っているか教えてください。', correct: 'cut', stage: getStage('警察の者ですが。') },
+            { id: 3, category: 'fraud', line1: '役所の者ですが。', line2: '口座番号を読み上げてください。', correct: 'cut', stage: getStage('役所の者ですが。') },
+            { id: 4, category: 'fraud', line1: '病院ですが。', line2: 'キャッシュカードの暗証番号を教えてください。', correct: 'cut', stage: getStage('病院ですが。') },
+            { id: 5, category: 'fraud', line1: '○○銀行ですが。', line2: 'キャッシュカードを封筒に入れて渡してください。', correct: 'cut', stage: getStage('○○銀行ですが。') },
+            { id: 6, category: 'fraud', line1: 'もしもし検察庁ですが。', line2: 'ATMの前に行ってください。', correct: 'cut', stage: getStage('もしもし検察庁ですが。') },
+            { id: 7, category: 'fraud', line1: '警察の者ですが。', line2: 'こちらの指示どおりにATMを操作してください。', correct: 'cut', stage: getStage('警察の者ですが。') },
+            { id: 8, category: 'fraud', line1: '役所の者ですが。', line2: '今すぐ現金を引き出して用意してください。', correct: 'cut', stage: getStage('役所の者ですが。') },
+            { id: 9, category: 'fraud', line1: '病院ですが。', line2: 'ご自宅に現金を取りに行きます。', correct: 'cut', stage: getStage('病院ですが。') },
+            { id: 10, category: 'fraud', line1: '○○銀行ですが。', line2: '指定の口座にお金を振り込んでください。', correct: 'cut', stage: getStage('○○銀行ですが。') },
+            { id: 11, category: 'fraud', line1: 'もしもし検察庁ですが。', line2: '手数料として現金を振り込んでください。', correct: 'cut', stage: getStage('もしもし検察庁ですが。') },
+            { id: 12, category: 'fraud', line1: '警察の者ですが。', line2: '保釈金としてまとまったお金を用意してください。', correct: 'cut', stage: getStage('警察の者ですが。') },
+            { id: 13, category: 'fraud', line1: '役所の者ですが。', line2: '家族に内緒で手続きしてください。', correct: 'cut', stage: getStage('役所の者ですが。') },
+            { id: 14, category: 'fraud', line1: '病院ですが。', line2: 'この電話は録音しないでください。', correct: 'cut', stage: getStage('病院ですが。') },
+            { id: 15, category: 'fraud', line1: '○○銀行ですが。', line2: 'カードを預かりますので封筒に入れてください。', correct: 'cut', stage: getStage('○○銀行ですが。') },
+            { id: 16, category: 'fraud', line1: 'もしもし検察庁ですが。', line2: '暗証番号を書いたメモを同封してください。', correct: 'cut', stage: getStage('もしもし検察庁ですが。') },
+            { id: 17, category: 'fraud', line1: '警察の者ですが。', line2: 'スマホに届いた番号を読み上げてください。', correct: 'cut', stage: getStage('警察の者ですが。') },
+            { id: 18, category: 'fraud', line1: '役所の者ですが。', line2: 'セキュリティ解除のためコードを教えてください。', correct: 'cut', stage: getStage('役所の者ですが。') },
+            { id: 19, category: 'fraud', line1: '病院ですが。', line2: 'すぐにコンビニで電子マネーを購入してください。', correct: 'cut', stage: getStage('病院ですが。') },
+            { id: 20, category: 'fraud', line1: '○○銀行ですが。', line2: 'カードの裏面の番号を教えてください。', correct: 'cut', stage: getStage('○○銀行ですが。') },
+            { id: 21, category: 'fraud', line1: 'もしもし検察庁ですが。', line2: 'インターネットバンキングのIDとパスワードを教えてください。', correct: 'cut', stage: getStage('もしもし検察庁ですが。') },
+            { id: 22, category: 'fraud', line1: '警察の者ですが。', line2: 'パソコンを開いて遠隔操作を許可してください。', correct: 'cut', stage: getStage('警察の者ですが。') },
+            { id: 23, category: 'fraud', line1: '役所の者ですが。', line2: 'ご家族に代わって口座を管理します。カードを送ってください。', correct: 'cut', stage: getStage('役所の者ですが。') },
+            { id: 24, category: 'fraud', line1: '病院ですが。', line2: 'ご自宅の貴重品をまとめておいてください。取りに伺います。', correct: 'cut', stage: getStage('病院ですが。') },
+            { id: 25, category: 'fraud', line1: '○○銀行ですが。', line2: '口座を安全な口座に移しますのでお金を移動してください。', correct: 'cut', stage: getStage('○○銀行ですが。') },
+            { id: 26, category: 'fraud', line1: 'もしもし検察庁ですが。', line2: 'この電話の内容は誰にも話さないでください。', correct: 'cut', stage: getStage('もしもし検察庁ですが。') },
+            { id: 27, category: 'fraud', line1: '警察の者ですが。', line2: '家族にも絶対に言わないでください。', correct: 'cut', stage: getStage('警察の者ですが。') },
+            { id: 28, category: 'fraud', line1: '役所の者ですが。', line2: '今日中に全額支払えば記録に残りません。', correct: 'cut', stage: getStage('役所の者ですが。') },
+            { id: 29, category: 'fraud', line1: '病院ですが。', line2: '支払わなければ逮捕されます。', correct: 'cut', stage: getStage('病院ですが。') },
+            { id: 30, category: 'fraud', line1: '○○銀行ですが。', line2: '支払えばすぐに事件は無かったことになります。', correct: 'cut', stage: getStage('○○銀行ですが。') },
+            { id: 31, category: 'fraud', line1: 'もしもし検察庁ですが。', line2: 'すべて私どもに任せてお金だけ用意してください。', correct: 'cut', stage: getStage('もしもし検察庁ですが。') },
+            { id: 32, category: 'fraud', line1: '警察の者ですが。', line2: 'キャッシュカードをハサミで切らずにそのまま渡してください。', correct: 'cut', stage: getStage('警察の者ですが。') },
+            { id: 33, category: 'fraud', line1: '役所の者ですが。', line2: '安全のため新しい口座を作りますので、古い口座を空にしてください。', correct: 'cut', stage: getStage('役所の者ですが。') },
+            { id: 34, category: 'fraud', line1: '病院ですが。', line2: '携帯電話を誰にも見せないでください。手続き中です。', correct: 'cut', stage: getStage('病院ですが。') },
+            { id: 35, category: 'fraud', line1: '○○銀行ですが。', line2: '話を信じられないなら今すぐ振り込んで確かめてください。', correct: 'cut', stage: getStage('○○銀行ですが。') },
+            { id: 36, category: 'fraud', line1: 'もしもし検察庁ですが。', line2: '録音されると困るのでメモは取らないでください。', correct: 'cut', stage: getStage('もしもし検察庁ですが。') },
+            { id: 37, category: 'fraud', line1: '警察の者ですが。', line2: 'お孫さんのために今すぐお金を振り込んでください。', correct: 'cut', stage: getStage('警察の者ですが。') },
+            { id: 38, category: 'fraud', line1: '役所の者ですが。', line2: '名前を名乗らない方が安全なので詳しくは言えません。', correct: 'cut', stage: getStage('役所の者ですが。') },
+            { id: 39, category: 'fraud', line1: '病院ですが。', line2: 'こちらで代わりに署名しておきますからお金だけお願いします。', correct: 'cut', stage: getStage('病院ですが。') },
+            { id: 40, category: 'fraud', line1: '○○銀行ですが。', line2: '税金を安くするため現金を預からせてください。', correct: 'cut', stage: getStage('○○銀行ですが。') },
+            { id: 41, category: 'fraud', line1: 'もしもし検察庁ですが。', line2: '早くしないと口座が凍結しますので、今すぐ指定口座に振り込んでください。', correct: 'cut', stage: getStage('もしもし検察庁ですが。') },
+            { id: 42, category: 'fraud', line1: '警察の者ですが。', line2: 'すぐにキャッシュカードをポストに入れてください。回収します。', correct: 'cut', stage: getStage('警察の者ですが。') },
+            { id: 43, category: 'fraud', line1: '役所の者ですが。', line2: '銀行員の前ではこの話をしないでください。邪魔されます。', correct: 'cut', stage: getStage('役所の者ですが。') },
+            { id: 44, category: 'fraud', line1: '病院ですが。', line2: 'あなた名義で新しい口座を作りますので印鑑と通帳を預けてください。', correct: 'cut', stage: getStage('病院ですが。') },
+            { id: 45, category: 'fraud', line1: '○○銀行ですが。', line2: '記録に残らないよう現金で支払ってください。', correct: 'cut', stage: getStage('○○銀行ですが。') },
+            { id: 46, category: 'fraud', line1: 'もしもし検察庁ですが。', line2: '警察には内緒で手続きしてください。こちらが本当の味方です。', correct: 'cut', stage: getStage('もしもし検察庁ですが。') },
+            { id: 47, category: 'fraud', line1: '警察の者ですが。', line2: '定期預金を解約して全額移してください。', correct: 'cut', stage: getStage('警察の者ですが。') },
+            { id: 48, category: 'fraud', line1: '役所の者ですが。', line2: 'クレジットカードの利用限度額を教えてください。', correct: 'cut', stage: getStage('役所の者ですが。') },
+            { id: 49, category: 'fraud', line1: '病院ですが。', line2: 'すべてのカード情報をこちらで保管しますので教えてください。', correct: 'cut', stage: getStage('病院ですが。') },
+            { id: 50, category: 'fraud', line1: '○○銀行ですが。', line2: 'このままだと逮捕されますが今振り込めば止められます。', correct: 'cut', stage: getStage('○○銀行ですが。') },
+            { id: 51, category: 'normal', line1: 'もしもし検察庁ですが。', line2: '先日の被害届について確認があります。', correct: 'accept', stage: getStage('もしもし検察庁ですが。') },
+            { id: 52, category: 'normal', line1: '警察の者ですが。', line2: '落とし物が届いております。確認のためご連絡です。', correct: 'accept', stage: getStage('警察の者ですが。') },
+            { id: 53, category: 'normal', line1: '役所の者ですが。', line2: '書類の内容に不備があり確認させていただきます。', correct: 'accept', stage: getStage('役所の者ですが。') },
+            { id: 54, category: 'normal', line1: '病院ですが。', line2: '来週の診察の予約確認です。', correct: 'accept', stage: getStage('病院ですが。') },
+            { id: 55, category: 'normal', line1: '○○銀行ですが。', line2: '通帳更新のお知らせです。', correct: 'accept', stage: getStage('○○銀行ですが。') },
+            { id: 56, category: 'normal', line1: 'もしもし検察庁ですが。', line2: '事情聴取の日程調整についてご連絡しました。', correct: 'accept', stage: getStage('もしもし検察庁ですが。') },
+            { id: 57, category: 'normal', line1: '警察の者ですが。', line2: '地域安全パトロールの案内です。', correct: 'accept', stage: getStage('警察の者ですが。') },
+            { id: 58, category: 'normal', line1: '役所の者ですが。', line2: '介護保険の通知を送付しました。ご確認ください。', correct: 'accept', stage: getStage('役所の者ですが。') },
+            { id: 59, category: 'normal', line1: '病院ですが。', line2: 'お薬が準備できましたのでご連絡です。', correct: 'accept', stage: getStage('病院ですが。') },
+            { id: 60, category: 'normal', line1: '○○銀行ですが。', line2: '口座名義変更の手続き書類が届いております。', correct: 'accept', stage: getStage('○○銀行ですが。') },
+            { id: 61, category: 'normal', line1: 'もしもし検察庁ですが。', line2: '問い合わせいただいた件の返答です。', correct: 'accept', stage: getStage('もしもし検察庁ですが。') },
+            { id: 62, category: 'normal', line1: '警察の者ですが。', line2: '迷子の方があなたの連絡先を申し出ています。', correct: 'accept', stage: getStage('警察の者ですが。') },
+            { id: 63, category: 'normal', line1: '役所の者ですが。', line2: '固定資産税の納付書を発送いたしました。', correct: 'accept', stage: getStage('役所の者ですが。') },
+            { id: 64, category: 'normal', line1: '病院ですが。', line2: '検査結果が出ましたのでお知らせです。', correct: 'accept', stage: getStage('病院ですが。') },
+            { id: 65, category: 'normal', line1: '○○銀行ですが。', line2: '新しいキャッシュカードが到着しました。', correct: 'accept', stage: getStage('○○銀行ですが。') },
+            { id: 66, category: 'normal', line1: 'もしもし検察庁ですが。', line2: '担当者が折り返し連絡いたします。', correct: 'accept', stage: getStage('もしもし検察庁ですが。') },
+            { id: 67, category: 'normal', line1: '警察の者ですが。', line2: '交通安全講習の案内をお送りします。', correct: 'accept', stage: getStage('警察の者ですが。') },
+            { id: 68, category: 'normal', line1: '役所の者ですが。', line2: '地域行事のお知らせです。', correct: 'accept', stage: getStage('役所の者ですが。') },
+            { id: 69, category: 'normal', line1: '病院ですが。', line2: '先日の診察後の経過について伺いたく。', correct: 'accept', stage: getStage('病院ですが。') },
+            { id: 70, category: 'normal', line1: '○○銀行ですが。', line2: 'ATM利用時間の変更についてご案内です。', correct: 'accept', stage: getStage('○○銀行ですが。') },
+            { id: 71, category: 'normal', line1: 'もしもし検察庁ですが。', line2: '呼び出し状の受取確認です。', correct: 'accept', stage: getStage('もしもし検察庁ですが。') },
+            { id: 72, category: 'normal', line1: '警察の者ですが。', line2: '目撃情報について追加で伺いたいことがあります。', correct: 'accept', stage: getStage('警察の者ですが。') },
+            { id: 73, category: 'normal', line1: '役所の者ですが。', line2: '住民票の写しの準備ができています。', correct: 'accept', stage: getStage('役所の者ですが。') },
+            { id: 74, category: 'normal', line1: '病院ですが。', line2: 'お会計に関する領収書の再発行が完了しました。', correct: 'accept', stage: getStage('病院ですが。') },
+            { id: 75, category: 'normal', line1: '○○銀行ですが。', line2: '定期預金の満期のお知らせです。', correct: 'accept', stage: getStage('○○銀行ですが。') },
+            { id: 76, category: 'normal', line1: 'もしもし検察庁ですが。', line2: '近日中に書類を発送しますのでご確認ください。', correct: 'accept', stage: getStage('もしもし検察庁ですが。') },
+            { id: 77, category: 'normal', line1: '警察の者ですが。', line2: '先日のお問い合わせの追加説明です。', correct: 'accept', stage: getStage('警察の者ですが。') },
+            { id: 78, category: 'normal', line1: '役所の者ですが。', line2: '行政サービス説明会のお知らせです。', correct: 'accept', stage: getStage('役所の者ですが。') },
+            { id: 79, category: 'normal', line1: '病院ですが。', line2: 'インフルエンザ予防接種の予約枠についてです。', correct: 'accept', stage: getStage('病院ですが。') },
+            { id: 80, category: 'normal', line1: '○○銀行ですが。', line2: '口座閉鎖のご相談について折り返しました。', correct: 'accept', stage: getStage('○○銀行ですが。') },
+            { id: 81, category: 'fraud', line1: 'もしもし検察庁ですが。', line2: 'あなたの口座から不正送金が検出されました。すぐに全額引き出してください。', correct: 'cut', stage: getStage('もしもし検察庁ですが。') },
+            { id: 82, category: 'fraud', line1: '警察の者ですが。', line2: '犯人グループに狙われています。安全な口座へ全額移してください。', correct: 'cut', stage: getStage('警察の者ですが。') },
+            { id: 83, category: 'fraud', line1: '役所の者ですが。', line2: 'あなたの受取人手当が発生しました。手数料をお払いください。', correct: 'cut', stage: getStage('役所の者ですが。') },
+            { id: 84, category: 'fraud', line1: '病院ですが。', line2: '急な手術が必要です。デポジットとして現金を用意してください。', correct: 'cut', stage: getStage('病院ですが。') },
+            { id: 85, category: 'fraud', line1: '○○銀行ですが。', line2: 'カード情報が漏洩しています。新しいカードの配送手数料をお支払いください。', correct: 'cut', stage: getStage('○○銀行ですが。') },
+            { id: 86, category: 'fraud', line1: 'もしもし検察庁ですが。', line2: 'あなたの名義で詐欺被害が報告されました。示談金が必要です。', correct: 'cut', stage: getStage('もしもし検察庁ですが。') },
+            { id: 87, category: 'fraud', line1: '警察の者ですが。', line2: '逮捕状が出ています。保釈金を今すぐお支払いください。', correct: 'cut', stage: getStage('警察の者ですが。') },
+            { id: 88, category: 'fraud', line1: '役所の者ですが。', line2: 'あなたの口座が凍結されます。解除料金をお振込ください。', correct: 'cut', stage: getStage('役所の者ですが。') },
+            { id: 89, category: 'fraud', line1: '病院ですが。', line2: '医療ローンの審査手数料をお支払いください。', correct: 'cut', stage: getStage('病院ですが。') },
+            { id: 90, category: 'fraud', line1: '○○銀行ですが。', line2: 'セキュリティ強化費用としてご協力ください。', correct: 'cut', stage: getStage('○○銀行ですが。') },
+            { id: 91, category: 'normal', line1: 'もしもし検察庁ですが。', line2: '供述調書の確認です。ご都合つきますか。', correct: 'accept', stage: getStage('もしもし検察庁ですが。') },
+            { id: 92, category: 'normal', line1: '警察の者ですが。', line2: '本人確認のため、お名前と住所を教えていただけますか。', correct: 'accept', stage: getStage('警察の者ですが。') },
+            { id: 93, category: 'normal', line1: '役所の者ですが。', line2: '給付金申請の書類が足りません。来庁をお願いします。', correct: 'accept', stage: getStage('役所の者ですが。') },
+            { id: 94, category: 'normal', line1: '病院ですが。', line2: '持参していただく書類について確認があります。', correct: 'accept', stage: getStage('病院ですが。') },
+            { id: 95, category: 'normal', line1: '○○銀行ですが。', line2: '相続手続きについてご相談があります。', correct: 'accept', stage: getStage('○○銀行ですが。') },
+            { id: 96, category: 'normal', line1: 'もしもし検察庁ですが。', line2: '取り調べの日時を変更したくお電話しました。', correct: 'accept', stage: getStage('もしもし検察庁ですが。') },
+            { id: 97, category: 'normal', line1: '警察の者ですが。', line2: '証拠品の受け取りについてお知らせです。', correct: 'accept', stage: getStage('警察の者ですが。') },
+            { id: 98, category: 'normal', line1: '役所の者ですが。', line2: '手当支給日についてのお知らせです。', correct: 'accept', stage: getStage('役所の者ですが。') },
+            { id: 99, category: 'normal', line1: '病院ですが。', line2: '入院手続きについてご説明します。', correct: 'accept', stage: getStage('病院ですが。') },
+            { id: 100, category: 'normal', line1: '○○銀行ですが。', line2: '住宅ローン説明会のご案内です。', correct: 'accept', stage: getStage('○○銀行ですが。') }
+        ];
+
+        const dangerPatterns = [
+            ['暗証番号', /暗証番号/],
+            ['口座情報', /口座|残高/],
+            ['ATM操作', /ATM/],
+            ['カード', /カード/],
+            ['現金', /現金/],
+            ['振り込み', /振り込|送金|移して|移動|お振込/],
+            ['電子マネー', /電子マネー/],
+            ['秘密の指示', /内緒|誰にも|話さない|録音しない|メモは取らない|銀行員の前では/],
+            ['急がせる言葉', /今すぐ|すぐに|今日中|早く|急な/],
+            ['脅し文句', /逮捕|差し押さえ|凍結|狙われています/],
+            ['遠隔操作', /遠隔操作/],
+            ['コード要求', /コード|届いた番号|IDとパスワード|パスワード/]
+        ];
+
+        const state = {
+            difficulty: 'normal',
+            score: 0,
+            callCount: 0,
+            totalCalls: 15,
+            correctCount: 0,
+            current: null,
+            usedIds: [],
+            canAnswer: false,
+            line2Start: 0,
+            timer: null,
+            charTimer: null,
+            questionDeck: [],
+            answers: [],
+            dangerCounts: {},
+            fraudMiss: 0,
+            normalMiss: 0,
+            streak: 0,
+            maxStreak: 0,
+            stageStats: {}
+        };
+
+        const settings = {
+            easy: { fraudRatio: 0.7, fraudPoints: [8, 6, 3, 1], normalPoints: [5, 3, 2, 1], fraudPenalty: -8, normalPenalty: -2, ranks: [80, 60, 40, 20] },
+            normal: { fraudRatio: 0.625, fraudPoints: [10, 7, 4, 1], normalPoints: [6, 4, 2, 1], fraudPenalty: -10, normalPenalty: -3, ranks: [120, 90, 60, 30] },
+            hard: { fraudRatio: 0.5, fraudPoints: [12, 9, 6, 2], normalPoints: [8, 6, 3, 1], fraudPenalty: -12, normalPenalty: -5, ranks: [180, 140, 100, 60] }
+        };
+
+        const sounds = {
+            call: new Audio('call.mp3'),
+            correct: new Audio('correct_answer.mp3'),
+            wrong: new Audio('wrong_answer.mp3'),
+            ending: new Audio('ending.mp3')
+        };
+        let soundsUnlocked = false;
+        Object.values(sounds).forEach(sound => {
+            sound.preload = 'auto';
+            sound.volume = 0.58;
+        });
+
+        const gameRoot = document.querySelector('.game');
+        const titleScreen = document.getElementById('titleScreen');
+        const gameScreen = document.getElementById('gameScreen');
+        const resultScreen = document.getElementById('resultScreen');
+        const startButton = document.getElementById('startButton');
+        const acceptButton = document.getElementById('acceptButton');
+        const cutButton = document.getElementById('cutButton');
+        const restartButton = document.getElementById('restartButton');
+        const line1 = document.getElementById('line1');
+        const line2 = document.getElementById('line2');
+        const feedback = document.getElementById('feedback');
+        const scoreValue = document.getElementById('scoreValue');
+        const callCount = document.getElementById('callCount');
+        const totalCalls = document.getElementById('totalCalls');
+        const streakValue = document.getElementById('streakValue');
+        const stageLabel = document.getElementById('stageLabel');
+
+        document.querySelectorAll('[data-difficulty]').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('[data-difficulty]').forEach(item => item.classList.remove('selected'));
+                button.classList.add('selected');
+                state.difficulty = button.dataset.difficulty;
+            });
+        });
+
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', showTitle);
+        acceptButton.addEventListener('click', () => answer('accept'));
+        cutButton.addEventListener('click', () => answer('cut'));
+
+        document.addEventListener('keydown', event => {
+            if (!state.canAnswer) return;
+            if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'A') answer('accept');
+            if (event.key === 'ArrowRight' || event.key === 'c' || event.key === 'C' || event.key === 'x' || event.key === 'X') answer('cut');
+        });
+
+        function show(screen) {
+            titleScreen.classList.remove('active');
+            gameScreen.classList.remove('active');
+            resultScreen.classList.remove('active');
+            screen.classList.add('active');
+        }
+
+        function startGame() {
+            unlockSounds();
+            state.score = 0;
+            state.callCount = 0;
+            state.correctCount = 0;
+            state.current = null;
+            state.usedIds = [];
+            state.canAnswer = false;
+            state.answers = [];
+            state.dangerCounts = {};
+            state.fraudMiss = 0;
+            state.normalMiss = 0;
+            state.streak = 0;
+            state.maxStreak = 0;
+            state.stageStats = {};
+            state.totalCalls = 15;
+            state.questionDeck = createQuestionDeck();
+            totalCalls.textContent = state.totalCalls;
+            updateScore();
+            updateStreak();
+            show(gameScreen);
+            nextQuestion();
+        }
+
+        function showTitle() {
+            clearTimeout(state.timer);
+            clearInterval(state.charTimer);
+            setButtons(false);
+            feedback.textContent = '';
+            line1.textContent = '';
+            line2.textContent = '';
+            stageLabel.textContent = 'ステージ';
+            show(titleScreen);
+        }
+
+        function nextQuestion() {
+            clearTimeout(state.timer);
+            clearInterval(state.charTimer);
+            state.callCount += 1;
+            state.canAnswer = false;
+            setButtons(false);
+            feedback.textContent = '';
+
+            if (state.callCount > state.totalCalls) {
+                showResult();
+                return;
+            }
+
+            state.current = state.questionDeck[state.callCount - 1] || pickQuestion();
+            state.usedIds.push(state.current.id);
+            callCount.textContent = state.callCount;
+            stageLabel.textContent = state.current.stage;
+            line1.textContent = state.current.line1;
+            line2.textContent = '';
+            playSound('call');
+
+            state.timer = setTimeout(() => {
+                state.line2Start = Date.now();
+                state.canAnswer = true;
+                setButtons(true);
+                revealLine2(state.current.line2);
+            }, 620);
+        }
+
+        function revealLine2(text) {
+            clearInterval(state.charTimer);
+            line2.textContent = '';
+            let index = 0;
+            state.charTimer = setInterval(() => {
+                line2.textContent += text[index] || '';
+                index += 1;
+                if (index >= text.length) clearInterval(state.charTimer);
+            }, 26);
+        }
+
+        function answer(action) {
+            if (!state.canAnswer || !state.current) return;
+
+            state.canAnswer = false;
+            setButtons(false);
+            clearInterval(state.charTimer);
+            line2.textContent = state.current.line2;
+
+            const q = state.current;
+            const responseTime = Math.max(0, (Date.now() - state.line2Start) / 1000);
+            const correct = action === q.correct;
+            const words = getDangerWords(q);
+            let points = 0;
+
+            if (correct) {
+                playSound('correct');
+                flashGame('correct');
+                state.correctCount += 1;
+                state.streak += 1;
+                state.maxStreak = Math.max(state.maxStreak, state.streak);
+                points = scoreFor(q.category, responseTime);
+                feedback.style.color = '#70ff70';
+                feedback.textContent = q.category === 'fraud' ? '正解！切りました！' : '正解！良い判断です';
+            } else {
+                playSound('wrong');
+                flashGame('wrong');
+                const setting = settings[state.difficulty];
+                state.streak = 0;
+                points = q.category === 'fraud' ? setting.fraudPenalty : setting.normalPenalty;
+                feedback.style.color = '#ff7474';
+                feedback.textContent = q.category === 'fraud' ? '危険な電話でした！' : '切ってしまいました';
+                if (q.category === 'fraud') state.fraudMiss += 1;
+                if (q.category === 'normal') state.normalMiss += 1;
+            }
+
+            if (q.category === 'fraud' && words.length > 0) {
+                words.forEach(word => state.dangerCounts[word] = (state.dangerCounts[word] || 0) + 1);
+                feedback.textContent += '\n危険ワード: ' + words.slice(0, 2).join(' / ');
+            }
+
+            state.score += points;
+            recordStageResult(q, correct);
+            state.answers.push({ q, correct, action, responseTime, words });
+            updateScore();
+            updateStreak();
+            state.timer = setTimeout(nextQuestion, 1300);
+        }
+
+        function scoreFor(category, seconds) {
+            const setting = settings[state.difficulty];
+            const values = category === 'fraud' ? setting.fraudPoints : setting.normalPoints;
+            const limits = category === 'fraud' ? [1.6, 2.2, 3.0] : [1.8, 2.5, 3.5];
+            if (seconds <= limits[0]) return values[0];
+            if (seconds <= limits[1]) return values[1];
+            if (seconds <= limits[2]) return values[2];
+            return values[3];
+        }
+
+        function updateScore() {
+            const sign = state.score < 0 ? '-' : '';
+            scoreValue.textContent = sign + String(Math.abs(state.score)).padStart(4, '0');
+        }
+
+        function updateStreak() {
+            streakValue.textContent = state.streak;
+        }
+
+        function createQuestionDeck() {
+            const perStage = 3;
+            const stages = shuffle([...new Set(questions.map(q => q.stage))]);
+            const deck = [];
+
+            stages.forEach(stage => {
+                const stageQuestions = questions.filter(q => q.stage === stage);
+                const fraudCount = Math.round(perStage * settings[state.difficulty].fraudRatio);
+                const normalCount = perStage - fraudCount;
+                deck.push(...takeQuestions(stageQuestions, 'fraud', fraudCount));
+                deck.push(...takeQuestions(stageQuestions, 'normal', normalCount));
+            });
+
+            while (deck.length < state.totalCalls) {
+                deck.push(pickQuestion(deck.map(q => q.id)));
+            }
+
+            return shuffle(deck).slice(0, state.totalCalls);
+        }
+
+        function takeQuestions(pool, category, count) {
+            return shuffle(pool.filter(q => q.category === category)).slice(0, count);
+        }
+
+        function pickQuestion(excludedIds = state.usedIds) {
+            const setting = settings[state.difficulty];
+            const wantFraud = Math.random() < setting.fraudRatio;
+            let pool = questions.filter(q => q.category === (wantFraud ? 'fraud' : 'normal'));
+            let available = pool.filter(q => !excludedIds.includes(q.id));
+            if (available.length === 0) available = pool;
+            return available[Math.floor(Math.random() * available.length)];
+        }
+
+        function shuffle(items) {
+            const copied = [...items];
+            for (let i = copied.length - 1; i > 0; i -= 1) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copied[i], copied[j]] = [copied[j], copied[i]];
+            }
+            return copied;
+        }
+
+        function getStage(line) {
+            if (line.includes('警察') || line.includes('検察')) return '警察・検察なりすまし';
+            if (line.includes('役所')) return '役所・手続き';
+            if (line.includes('銀行')) return '銀行・カード';
+            if (line.includes('病院')) return '病院・家族不安';
+            return '生活連絡';
+        }
+
+        function getDangerWords(q) {
+            if (q.category !== 'fraud') return [];
+            const text = q.line1 + ' ' + q.line2;
+            return dangerPatterns.filter(item => item[1].test(text)).map(item => item[0]);
+        }
+
+        function recordStageResult(q, correct) {
+            if (!state.stageStats[q.stage]) {
+                state.stageStats[q.stage] = { total: 0, correct: 0 };
+            }
+
+            state.stageStats[q.stage].total += 1;
+            if (correct) state.stageStats[q.stage].correct += 1;
+        }
+
+        function setButtons(enabled) {
+            acceptButton.disabled = !enabled;
+            cutButton.disabled = !enabled;
+        }
+
+        function showResult() {
+            const total = state.answers.length;
+            const rate = total > 0 ? Math.round((state.correctCount / total) * 100) : 0;
+            const rank = getRank(state.score);
+            const sign = state.score < 0 ? '-' : '';
+
+            document.getElementById('finalScore').textContent = sign + String(Math.abs(state.score)).padStart(4, '0');
+            document.getElementById('rankValue').textContent = rank;
+            document.getElementById('correctCount').textContent = state.correctCount;
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('correctRate').textContent = rate;
+            showDiagnosis(rate);
+            showReview();
+            document.getElementById('educationMessage').textContent = '最大連続正解: ' + state.maxStreak + '。覚えておくこと: 警察・検察・銀行が電話で暗証番号や口座残高を聞くことはありません。不安な電話は、いったん切って家族や警察 #9110、消費者ホットライン 188 に相談しましょう。';
+            playSound('ending');
+            show(resultScreen);
+        }
+
+        function unlockSounds() {
+            if (soundsUnlocked) return;
+            soundsUnlocked = true;
+            Object.values(sounds).forEach(sound => {
+                try {
+                    sound.load();
+                } catch (error) {
+                }
+            });
+        }
+
+        function playSound(name) {
+            const sound = sounds[name];
+            if (!sound) return;
+            try {
+                sound.pause();
+                sound.currentTime = 0;
+                const promise = sound.play();
+                if (promise) promise.catch(() => {});
+            } catch (error) {}
+        }
+
+        function flashGame(type) {
+            gameRoot.classList.remove('flash-correct', 'flash-wrong');
+            void gameRoot.offsetWidth;
+            gameRoot.classList.add('flash-' + type);
+            setTimeout(() => gameRoot.classList.remove('flash-' + type), 260);
+        }
+
+        function getRank(score) {
+            const ranks = settings[state.difficulty].ranks;
+            if (score >= ranks[0]) return 'S';
+            if (score >= ranks[1]) return 'A';
+            if (score >= ranks[2]) return 'B';
+            if (score >= ranks[3]) return 'C';
+            return 'D';
+        }
+
+        function showDiagnosis(rate) {
+            const weakStage = getWeakStage();
+            let title = '慎重バランス型';
+            let message = '落ち着いて判定できています。迷う電話ほど、いったん切って相談する意識を持つとさらに安心です。';
+
+            if (state.fraudMiss >= 2) {
+                title = '危険ワード見落とし型';
+                message = '詐欺電話を受けてしまう場面がありました。お金、カード、暗証番号、ATMが出たら、まず切る判断を優先しましょう。';
+            } else if (state.normalMiss >= 3) {
+                title = '警戒強め型';
+                message = '怪しい電話を切る意識は強めです。お金や秘密を求めているかを見ると判定が安定します。';
+            } else if (rate >= 90) {
+                title = '即断ガード型';
+                message = '危険な言葉への反応が速く、正確です。実際の電話でも、急かされても一度止まりましょう。';
+            } else if (rate >= 80) {
+                title = '安定判定型';
+                message = 'かなり安定して見分けられています。繰り返すほど、危険ワードに自然と反応できます。';
+            }
+
+            if (weakStage) {
+                message += ' 今回注意したい手口は「' + weakStage + '」です。';
+            }
+
+            document.getElementById('diagnosisTitle').textContent = title;
+            document.getElementById('diagnosisMessage').textContent = message;
+        }
+
+        function showReview() {
+            const list = document.getElementById('dangerWordList');
+            const mistakes = document.getElementById('mistakeReview');
+            list.textContent = '';
+
+            const words = Object.entries(state.dangerCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+            if (words.length === 0) {
+                const item = document.createElement('li');
+                item.textContent = 'なし';
+                list.appendChild(item);
+            } else {
+                words.forEach(([word, count]) => {
+                    const item = document.createElement('li');
+                    item.textContent = word + ' x' + count;
+                    list.appendChild(item);
+                });
+            }
+
+            const missed = state.answers.filter(item => !item.correct).slice(0, 3);
+            if (missed.length === 0) {
+                mistakes.textContent = 'ミスはありませんでした。危険ワードへの反応を維持しましょう。';
+            } else {
+                mistakes.textContent = missed.map(item => {
+                    const picked = item.action === 'cut' ? '切る' : '受ける';
+                    const expected = item.q.correct === 'cut' ? '切る' : '受ける';
+                    const wordsText = item.words.length ? ' / ' + item.words.join('・') : '';
+                    return 'ミス: ' + picked + ' → 正解は' + expected + wordsText;
+                }).join('\n');
+            }
+        }
+
+        function getWeakStage() {
+            const entries = Object.entries(state.stageStats)
+                .filter(([, stat]) => stat.total >= 2)
+                .map(([stage, stat]) => ({ stage, rate: stat.correct / stat.total, total: stat.total }));
+
+            if (entries.length === 0) return '';
+            entries.sort((a, b) => a.rate - b.rate || b.total - a.total);
+            return entries[0].rate < 1 ? entries[0].stage : '';
+        }
+    </script>
 </body>
 </html>
+
